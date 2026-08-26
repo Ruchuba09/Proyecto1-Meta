@@ -1,0 +1,20 @@
+Planificacion de Tareas
+
+Integrante1: Modulo de Datos, Parser y funcion Fitness
+  Escribir la funcion Parser: en python para leer los archivos de benchmark, procesar el numero de trabajos y maquinas, ademas de extraer correctamente la matriz de tiempos de procesamientos
+  Calculo del fitness: implementar la funcion de evaluacion basada en tiempos de finalizacion dinamicos, asegurando que este se recorrra correctamente segun distintas permutaciones
+  Validacion inicial: Probar el parser y el calculo de fitness con pruebas pequeñas(3x2), para corroborar la implemnetacon con teoria
+  Redaccion del informe: Hacer la introduccion, definicion formal del problema y la descripcion del modelo matematico
+
+Integrante2:  Operador Metaheuristico
+  Inicializacion y operadore genetico: desarrrollar modulos para trabajar con poblacion inicial, ademas de programar los operadores de seleccion, el crossover(cruce) y mutacion
+  Estructurar el algoritmo genetico: integrar el bucle principal del AG(algoritmo genetico) y poniendo parametros de probabilidades dentro de los cruces, mutaciones, tamaño de poblacion y elitismo
+  Control de Versiones y pruebas: asegurarse de la codificacion modular y funciones de numeros aleatorios
+  Redaccion del informe: Redactar la seccion teorica y de diseño del AG dentro de la plantilla
+
+Integrante3: Busqueda Local(Algoritmo memetico) y experimentacion
+  Operador de busqueda local:implementar la variante de busqueda local para permutaciones y todo esto acoplarlo al AG para conformar el Algoritmo memetico
+  Diseño experimental y automatizado: escribir scripts para ejecutar pruebas masivas con distintas instancias de taillard, asi recolectando metricas de makespan y calculando el RPD(desviacion)
+  Analisis estadistico: procesar los datos obtenidos para generar las tablas comparativas y graficas entre el AG y el memetico
+  Redaccion del informe: redactar los resultados, discusion y conclusiones  
+    
