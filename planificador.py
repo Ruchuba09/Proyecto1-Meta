@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Sequence
 
 
@@ -20,23 +21,49 @@ class Instancia:
 def leer_instancia(ruta: str | Path) -> Instancia:
     """Lee una instancia Taillard y devuelve sus dimensiones y tiempos."""
     archivo = Path(ruta)
-    valores_encabezado = archivo.read_text(encoding="utf-8").split()
-    if len(valores_encabezado) < 5:
+    lineas = archivo.read_text(encoding="utf-8").splitlines()
+    candidatos = [
+        (indice, re.findall(r"-?\d+(?:\.\d+)?", linea))
+        for indice, linea in enumerate(lineas)
+        if linea.strip()
+    ]
+    indice_metadatos, metadatos = next(
+        ((indice, valores) for indice, valores in candidatos if len(valores) >= 5),
+        (None, []),
+    )
+    if indice_metadatos is None:
         raise ValueError(f"{archivo} no contiene un encabezado Taillard completo")
 
-    trabajos, maquinas = int(valores_encabezado[0]), int(valores_encabezado[1])
+    metadatos = metadatos[:5]
+    trabajos, maquinas = int(metadatos[0]), int(metadatos[1])
     if trabajos <= 0 or maquinas <= 0:
         raise ValueError("El número de trabajos y máquinas debe ser positivo")
 
-    valores_esperados = 5 + trabajos * maquinas
-    if len(valores_encabezado) != valores_esperados:
+    inicio_matriz = indice_metadatos + 1
+    while inicio_matriz < len(lineas) and (
+        not lineas[inicio_matriz].strip()
+        or lineas[inicio_matriz].lstrip().startswith("#")
+    ):
+        inicio_matriz += 1
+    if (
+        inicio_matriz < len(lineas)
+        and len(lineas[inicio_matriz].split()) == 2
+    ):
+        inicio_matriz += 1
+    valores_matriz = [
+        valor
+        for linea in lineas[inicio_matriz:]
+        if linea.strip() and not linea.lstrip().startswith("#")
+        for valor in linea.split()
+    ]
+    valores_esperados = trabajos * maquinas
+    if len(valores_matriz) != valores_esperados:
         raise ValueError(
-            f"{archivo} debe contener {valores_esperados} valores y contiene "
-            f"{len(valores_encabezado)}"
+            f"{archivo} debe contener {valores_esperados} tiempos y contiene "
+            f"{len(valores_matriz)}"
         )
 
-    # Los cinco primeros valores son metadatos; el resto es la matriz.
-    tiempos = [int(valor) for valor in valores_encabezado[5:]]
+    tiempos = [int(valor) for valor in valores_matriz]
     tiempos_procesamiento = tuple(
         tuple(tiempos[fila * trabajos : (fila + 1) * trabajos])
         for fila in range(maquinas)
@@ -45,9 +72,9 @@ def leer_instancia(ruta: str | Path) -> Instancia:
         trabajos=trabajos,
         maquinas=maquinas,
         tiempos_procesamiento=tiempos_procesamiento,
-        semilla=int(valores_encabezado[2]),
-        limite_superior=float(valores_encabezado[3]),
-        limite_inferior=float(valores_encabezado[4]),
+        semilla=int(metadatos[2]),
+        limite_superior=float(metadatos[3]),
+        limite_inferior=float(metadatos[4]),
     )
 
 
