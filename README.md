@@ -21,3 +21,7 @@ pip install -r requirements.txt
 
 
 ####Ejemplo de ejecución
+
+
+####Recordar crear archivo de salida. csv
+
