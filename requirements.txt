@@ -1,0 +1,7 @@
+aqui van las bibliotecas necesarias para el proyecto
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+#usar random y tile
+# shuffle = np.random.shuffle 
