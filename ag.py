@@ -1,65 +1,65 @@
-import sys
-import os
+import argparse
+import csv
+from pathlib import Path
 import time
-import numpy as np
 
-tiempo_proceso_ini = time.process_time()
-sep = os.path.sep
+from algoritmo_genetico import algoritmo_genetico, algoritmo_memetico
+from planificador import leer_instancia
 
-if len(sys.argv) == 8:
-    semilla = int(sys.argv[1])
-    tamaño_poblacion = int(sys.argv[2])
-    probabilidad_cruce = float(sys.argv[3])
-    probabilidad_mutacion = float(sys.argv[4])
-    numero_iteradores = int(sys.argv[5])
-    entrada = 'data' + sep + sys.argv[6]
-    salida = 'result'+ sep + sys.argv[7]
-    print('parametros ingresados: ', semilla, tamaño_poblacion, probabilidad_cruce, probabilidad_mutacion, numero_iteradores, entrada, salida)
 
-else:
-    print('Error: cantidad de parametros incorrecta')
-    print('Los parámetros a ingresar son: semilla, tamaño_poblacion, probabilidad_cruce, probabilidad_mutacion, numero_iteradores, entrada, salida')
-    print('donde:')
-    print('semilla: valor entero positivo')
-    semilla = input()
-    print('tamaño_poblacion: valor entero positivo')
-    tamaño_poblacion = input()
-    print('probabilidad_cruce: valor real positivo')
-    probabilidad_cruce = input()
-    print('probabilidad_mutacion: valor real positivo')
-    probabilidad_mutacion = input()
-    print('numero_iteradores: valor entero positivo')
-    numero_iteradores = input()
-    print('entrada: nombre de archivo de entrada (ubicado en la carpeta entradas)')
-    entrada = "entradas" +input()
-    print('salida: nombre de archivo de salida (ubicado en la carpeta salidas)')
-    salida = "salidas" + input()
-    sys.exit(1)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Ejecuta el algoritmo genetico PFSP")
+    parser.add_argument("semilla", type=int)
+    parser.add_argument("tamaño_poblacion", type=int)
+    parser.add_argument("probabilidad_cruce", type=float)
+    parser.add_argument("probabilidad_mutacion", type=float)
+    parser.add_argument("numero_iteraciones", type=int)
+    parser.add_argument("entrada", type=Path)
+    parser.add_argument("salida", type=Path)
+    parser.add_argument("--metodo", choices=("genetico", "memetico"), default="genetico")
+    parser.add_argument("--frecuencia-busqueda", type=int, default=1)
+    argumentos = parser.parse_args()
 
-with open(entrada, 'r') as f:
+    raiz = Path(__file__).resolve().parent
+    entrada = argumentos.entrada if argumentos.entrada.is_absolute() else raiz / argumentos.entrada
+    salida = argumentos.salida if argumentos.salida.is_absolute() else raiz / "result" / argumentos.salida
+    instancia = leer_instancia(entrada)
 
-    primera_linea = f.readlines().strip().split()
-    num_trabajos = int(primera_linea[0])
-    num_maquinas = int(primera_linea[1])
-    limite_inferior = int(primera_linea[3])
-    limite_superior = int(primera_linea[4])
-    matriz = np.loadtxt(f, dtype=int)
-print(f'P1:[{num_trabajos}, {num_maquinas}, {limite_inferior}, {limite_superior}]')
-print(matriz)
+    inicio = time.perf_counter()
+    ejecutar = algoritmo_memetico if argumentos.metodo == "memetico" else algoritmo_genetico
+    opciones = {
+        "tamaño_poblacion": argumentos.tamaño_poblacion,
+        "generaciones": argumentos.numero_iteraciones,
+        "probabilidad_cruce": argumentos.probabilidad_cruce,
+        "probabilidad_mutacion": argumentos.probabilidad_mutacion,
+        "semilla": argumentos.semilla,
+    }
+    if argumentos.metodo == "memetico":
+        opciones["frecuencia_busqueda"] = argumentos.frecuencia_busqueda
+    resultado = ejecutar(instancia.tiempos_procesamiento, **opciones)
+    tiempo = time.perf_counter() - inicio
+    salida.parent.mkdir(parents=True, exist_ok=True)
+    existe = salida.exists() and salida.stat().st_size > 0
+    with salida.open("a", encoding="utf-8", newline="") as archivo:
+        escritor = csv.writer(archivo)
+        if not existe:
+            escritor.writerow([
+                "semilla", "tamano_poblacion", "probabilidad_cruce",
+                "probabilidad_mutacion", "numero_iteraciones",
+                "tiempo_ejecucion", "mejor_generacion", "mejor_makespan",
+                "mejor_solucion",
+            ])
+        escritor.writerow([
+            argumentos.semilla, argumentos.tamaño_poblacion,
+            argumentos.probabilidad_cruce, argumentos.probabilidad_mutacion,
+            argumentos.numero_iteraciones, tiempo, resultado.historial.index(min(resultado.historial)),
+            resultado.mejor_fitness,
+                list(resultado.mejor_permutacion),
+        ])
+    print(f"Mejor makespan: {resultado.mejor_fitness} (resultado: {salida})")
 
-np.random.seed(semilla)
 
-def inicializar_poblacion(filas, columnas):
-    poblacion = np.tile(np.arange(columnas), (filas, 1))
-    for i in range(filas):
-        np.random.shuffle(poblacion[i])
-    return np.array(poblacion)
-
-poblacion = inicializar_poblacion(tamaño_poblacion, num_trabajos)
-print('poblacion inicial:')
-print(poblacion)
-
-tiempo_proceso_fin = time.process_time()
-print(f'Tiempo de proceso: %f{tiempo_proceso_fin - tiempo_proceso_ini} segundos')
+if __name__ == "__main__":
+    main()
 
 
