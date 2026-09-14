@@ -8,7 +8,7 @@ PROB_CRUCE = 0.8
 PROB_MUTACION = 0.2
 NUM_ITERACIONES = 100
 
-PROYECTO = Path(__file__).resolve().parent / "Proyecto1-Meta-Elias"
+PROYECTO = Path(__file__).resolve().parent
 SCRIPT_PRINCIPAL = PROYECTO / "ag.py"
 ARCHIVO_ENTRADA = "taillard/ta001.txt"
 ARCHIVO_SALIDA = "r_ins_20_10_01_c4.csv"
@@ -18,12 +18,8 @@ def main():
     resultado = PROYECTO / "result"
     resultado.mkdir(exist_ok=True)
     ruta_salida = resultado / ARCHIVO_SALIDA
-
-    with ruta_salida.open("w", encoding="utf-8", newline="") as archivo:
-        archivo.write(
-            "semilla,tamano_poblacion,probabilidad_cruce,probabilidad_mutacion,"
-            "numero_iteraciones,tiempo_ejecucion,mejor_generacion,mejor_makespan\n"
-        )
+    if ruta_salida.exists():
+        ruta_salida.unlink()
 
     for semilla in range(1, NUM_CORRIDAS + 1):
         comando = [

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-PROYECTO = Path(__file__).resolve().parent / "Proyecto1-Meta-Elias"
+PROYECTO = Path(__file__).resolve().parent
 ARCHIVO_RESULTADOS = PROYECTO / "result" / "r_ins_20_10_01_c4.csv"
 
 if not ARCHIVO_RESULTADOS.exists():
