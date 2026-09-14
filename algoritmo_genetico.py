@@ -19,6 +19,15 @@ class ResultadoGenetico:
     historial: tuple[int, ...]
 
 
+@dataclass(frozen=True)
+class ResultadoMemetico:
+    """Resultado de una ejecución del algoritmo memético."""
+
+    mejor_permutacion: Permutacion
+    mejor_fitness: int
+    historial: tuple[int, ...]
+
+
 def generar_poblacion_inicial(
     trabajos: int,
     tamaño_poblacion: int,
@@ -145,6 +154,92 @@ def algoritmo_genetico(
     mejor_indice = min(range(len(poblacion)), key=lambda indice: calcular_fitness(tiempos_procesamiento, poblacion[indice]))
     mejor = poblacion[mejor_indice]
     return ResultadoGenetico(mejor, calcular_fitness(tiempos_procesamiento, mejor), tuple(historial))
+
+
+def busqueda_local_intercambio(
+    tiempos_procesamiento: Sequence[Sequence[int]],
+    individuo: Permutacion,
+) -> Permutacion:
+    """Mejora una permutación con el primer intercambio que reduzca el fitness."""
+    actual = individuo
+    fitness_actual = calcular_fitness(tiempos_procesamiento, actual)
+    mejoro = True
+    while mejoro:
+        mejoro = False
+        for izquierda in range(len(actual) - 1):
+            for derecha in range(izquierda + 1, len(actual)):
+                candidato = list(actual)
+                candidato[izquierda], candidato[derecha] = (
+                    candidato[derecha],
+                    candidato[izquierda],
+                )
+                candidato = tuple(candidato)
+                fitness_candidato = calcular_fitness(tiempos_procesamiento, candidato)
+                if fitness_candidato < fitness_actual:
+                    actual = candidato
+                    fitness_actual = fitness_candidato
+                    mejoro = True
+                    break
+            if mejoro:
+                break
+    return actual
+
+
+def algoritmo_memetico(
+    tiempos_procesamiento: Sequence[Sequence[int]],
+    tamaño_poblacion: int = 50,
+    generaciones: int = 100,
+    probabilidad_cruce: float = 0.9,
+    probabilidad_mutacion: float = 0.1,
+    elitismo: int = 1,
+    tamaño_torneo: int = 3,
+    semilla: int | None = None,
+    frecuencia_busqueda: int = 1,
+) -> ResultadoMemetico:
+    """Combina evolución genética con búsqueda local periódica."""
+    trabajos = _obtener_trabajos(tiempos_procesamiento)
+    if tamaño_poblacion <= 0 or generaciones < 0:
+        raise ValueError("Población positiva y generaciones no negativas requeridas")
+    if elitismo < 0 or elitismo >= tamaño_poblacion:
+        raise ValueError("El elitismo debe estar entre 0 y población - 1")
+    _validar_probabilidad(probabilidad_cruce, "La probabilidad de cruce")
+    _validar_probabilidad(probabilidad_mutacion, "La probabilidad de mutación")
+    if frecuencia_busqueda <= 0:
+        raise ValueError("La frecuencia de búsqueda debe ser positiva")
+
+    rng = random.Random(semilla)
+    poblacion = generar_poblacion_inicial(trabajos, tamaño_poblacion, rng)
+    historial = []
+    for generacion in range(generaciones + 1):
+        fitnesses = [calcular_fitness(tiempos_procesamiento, individuo) for individuo in poblacion]
+        orden = sorted(range(len(poblacion)), key=lambda indice: fitnesses[indice])
+        historial.append(fitnesses[orden[0]])
+        if generacion == generaciones:
+            break
+
+        siguiente = [poblacion[indice] for indice in orden[:elitismo]]
+        while len(siguiente) < tamaño_poblacion:
+            padre1 = seleccion_torneo(poblacion, fitnesses, rng, tamaño_torneo)
+            padre2 = seleccion_torneo(poblacion, fitnesses, rng, tamaño_torneo)
+            hijo1, hijo2 = cruce_ox(padre1, padre2, rng, probabilidad_cruce)
+            hijos = [mutacion_intercambio(hijo1, rng, probabilidad_mutacion)]
+            if len(siguiente) + len(hijos) < tamaño_poblacion:
+                hijos.append(mutacion_intercambio(hijo2, rng, probabilidad_mutacion))
+            if generacion % frecuencia_busqueda == 0:
+                hijos = [busqueda_local_intercambio(tiempos_procesamiento, hijo) for hijo in hijos]
+            siguiente.extend(hijos)
+        poblacion = siguiente
+
+    mejor_indice = min(
+        range(len(poblacion)),
+        key=lambda indice: calcular_fitness(tiempos_procesamiento, poblacion[indice]),
+    )
+    mejor = poblacion[mejor_indice]
+    return ResultadoMemetico(
+        mejor,
+        calcular_fitness(tiempos_procesamiento, mejor),
+        tuple(historial),
+    )
 
 
 def _obtener_trabajos(tiempos_procesamiento: Sequence[Sequence[int]]) -> int:
