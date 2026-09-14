@@ -1,27 +1,59 @@
 # Proyecto1-Meta
-Imagina una fábrica textil donde cada pedido (trabajo) debe pasar, en el mismo orden, por una serie de estaciones: corte → costura → planchado → empaquetado. Cada estación es una máquina, y cada trabajo tarda un tiempo distinto en cada una de ellas.
 
-#este es el manual
+Implementación de un problema **Permutation Flow Shop Scheduling (PFSP)** con
+instancias Taillard. Se minimiza el *makespan*: todos los trabajos pasan por las
+máquinas en el mismo orden y cada trabajo mantiene la misma permutación en todas
+ellas.
 
-####Recordar tranajar con un ambiente de programacion.venv
+## Estructura
 
-####Guardar bibliotecas
-''''bash
-pip freeze > requirements.txt
+- `planificador.py`: parser Taillard, tiempos de finalización y fitness.
+- `algoritmo_genetico.py`: población, torneo, OX, mutación, elitismo y búsqueda local.
+- `ag.py`: punto de entrada de una corrida y escritura de resultados CSV.
+- `ejecutar_30_corridas.py`: automatiza 30 semillas sobre una instancia.
+- `graficar_resultados.py`: grafica el makespan de las corridas.
+- `pruebas.py`: pruebas unitarias del parser, fitness y operadores.
 
-####Cargar biblioteca
-''''bash
-pip install -r requirements.txt
+## Instalación
 
-####Parámetros de entrada
--nombre_parametro1: descripción
--
--
--
+Se recomienda usar un entorno virtual:
 
+```powershell
+py -3 -m venv .venv
+\.venv\Scripts\Activate.ps1
+py -3 -m pip install -r requirements.txt
+```
 
-####Ejemplo de ejecución
+## Pruebas
 
+```powershell
+py -3 -m unittest pruebas.py
+```
 
-####Recordar crear archivo de salida. csv
+## Una corrida
+
+Los caminos de entrada son relativos a la raíz del proyecto y los CSV relativos
+se guardan en `result/`:
+
+```powershell
+py -3 ag.py 1 100 0.8 0.2 100 taillard\ta001.txt resultados.csv
+```
+
+Los parámetros son, en orden: semilla, tamaño de población, probabilidad de
+cruce, probabilidad de mutación, generaciones, instancia y CSV de salida.
+Para ejecutar el memético, añade `--metodo memetico` y opcionalmente
+`--frecuencia-busqueda 2`.
+
+Cada fila del CSV contiene también `mejor_solucion`, la permutación de trabajos
+que produjo el mejor makespan de esa corrida.
+
+## Experimento y gráfica
+
+```powershell
+py -3 ejecutar_30_corridas.py
+py -3 graficar_resultados.py
+```
+
+El experimento escribe `result/r_ins_20_10_01_c4.csv`. Para usar otra instancia
+o parámetros, edita las constantes de `ejecutar_30_corridas.py`.
 
