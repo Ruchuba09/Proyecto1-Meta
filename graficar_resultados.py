@@ -6,6 +6,8 @@ import seaborn as sns
 
 PROYECTO = Path(__file__).resolve().parent
 ARCHIVO_RESULTADOS = PROYECTO / "result" / "r_ins_20_10_01_c4.csv"
+CARPETA_GRAFICOS = PROYECTO / "graficos"
+CARPETA_GRAFICOS.mkdir(exist_ok=True)
 
 if not ARCHIVO_RESULTADOS.exists():
     raise FileNotFoundError(
@@ -33,4 +35,5 @@ plt.title("Mejor makespan por corrida")
 plt.xlabel("Semilla")
 plt.ylabel("Makespan")
 plt.tight_layout()
+plt.savefig(CARPETA_GRAFICOS / "mejor_makespan_por_corrida.png", dpi=300)
 plt.show()
