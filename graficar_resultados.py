@@ -2,10 +2,15 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 
 PROYECTO = Path(__file__).resolve().parent
+<<<<<<< Updated upstream
 ARCHIVO_RESULTADOS = PROYECTO / "result" / "r_ins_20_10_01_c4.csv"
+=======
+ARCHIVO_RESULTADOS = PROYECTO / "result" / "busqueda_estrategica_ta002.csv"
+CARPETA_GRAFICOS = PROYECTO / "graficos"
+CARPETA_GRAFICOS.mkdir(exist_ok=True)
+>>>>>>> Stashed changes
 
 if not ARCHIVO_RESULTADOS.exists():
     raise FileNotFoundError(
@@ -28,7 +33,7 @@ for columna in [
     df[columna] = pd.to_numeric(df[columna], errors="coerce")
 
 plt.figure(figsize=(10, 5))
-sns.lineplot(data=df, x="semilla", y="mejor_makespan", marker="o")
+plt.plot(df["semilla"], df["mejor_makespan"], marker="o")
 plt.title("Mejor makespan por corrida")
 plt.xlabel("Semilla")
 plt.ylabel("Makespan")
