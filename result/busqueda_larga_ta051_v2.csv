@@ -1,0 +1,2 @@
+semilla,tamano_poblacion,probabilidad_cruce,probabilidad_mutacion,numero_iteraciones,tiempo_ejecucion,mejor_generacion,mejor_makespan,mejor_solucion
+11,120,0.9,0.15,800,9292.818787200027,101,3963,"[34, 36, 14, 9, 11, 30, 31, 32, 42, 33, 37, 5, 15, 13, 19, 41, 16, 38, 7, 6, 20, 47, 17, 18, 45, 35, 4, 28, 10, 44, 21, 25, 12, 23, 1, 22, 26, 48, 0, 46, 8, 40, 43, 39, 49, 29, 24, 27, 3, 2]"
