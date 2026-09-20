@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 PROYECTO = Path(__file__).resolve().parent
-<<<<<<< Updated upstream
-ARCHIVO_RESULTADOS = PROYECTO / "result" / "r_ins_20_10_01_c4.csv"
-=======
 ARCHIVO_RESULTADOS = PROYECTO / "result" / "busqueda_estrategica_ta002.csv"
 CARPETA_GRAFICOS = PROYECTO / "graficos"
 CARPETA_GRAFICOS.mkdir(exist_ok=True)
->>>>>>> Stashed changes
+=======
+CARPETA_GRAFICOS = PROYECTO / "graficos"
+CARPETA_GRAFICOS.mkdir(exist_ok=True)
+>>>>>>> 0a972d89d2716ef0938a426442d1e6d59346d388
 
 if not ARCHIVO_RESULTADOS.exists():
     raise FileNotFoundError(
@@ -38,4 +38,5 @@ plt.title("Mejor makespan por corrida")
 plt.xlabel("Semilla")
 plt.ylabel("Makespan")
 plt.tight_layout()
+plt.savefig(CARPETA_GRAFICOS / "mejor_makespan_por_corrida.png", dpi=300)
 plt.show()
