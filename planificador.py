@@ -86,22 +86,7 @@ def _validar_permutacion(permutacion: Sequence[int], trabajos: int) -> None:
             f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
         )
     for trabajo in permutacion:
-        if not isinstance(trabajo, int) or trabajo < 0 or trabajo >= trabajos or vistos[trabajo]:
-            raise ValueError(
-                f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
-            )
-        vistos[trabajo] = True
-
-
-def _validar_permutacion_rapida(permutacion: Sequence[int], trabajos: int) -> None:
-    """Valida una permutación sin crear conjuntos durante el AG."""
-    vistos = [False] * trabajos
-    if len(permutacion) != trabajos:
-        raise ValueError(
-            f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
-        )
-    for trabajo in permutacion:
-        if not isinstance(trabajo, int) or trabajo < 0 or trabajo >= trabajos or vistos[trabajo]:
+        if isinstance(trabajo, bool) or not isinstance(trabajo, int) or trabajo < 0 or trabajo >= trabajos or vistos[trabajo]:
             raise ValueError(
                 f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
             )
@@ -126,13 +111,12 @@ def tiempos_finalizacion(
     # Cada operación espera al trabajo anterior y a la máquina anterior.
     finalizacion = [[0] * trabajos for _ in range(maquinas)]
     for posicion, trabajo in enumerate(permutacion):
-        for maquina in range(maquinas):
+        anterior = 0
+        for maquina, pm in enumerate(tiempos_procesamiento):
             trabajo_anterior = finalizacion[maquina][posicion - 1] if posicion else 0
-            maquina_anterior = finalizacion[maquina - 1][posicion] if maquina else 0
-            finalizacion[maquina][posicion] = (
-                max(trabajo_anterior, maquina_anterior)
-                + tiempos_procesamiento[maquina][trabajo]
-            )
+            inicio = anterior if anterior > trabajo_anterior else trabajo_anterior
+            anterior = inicio + pm[trabajo]
+            finalizacion[maquina][posicion] = anterior
     return tuple(tuple(fila) for fila in finalizacion)
 
 
@@ -147,13 +131,16 @@ def calcular_fitness(
     trabajos = len(tiempos_procesamiento[0])
     if trabajos == 0 or any(len(fila) != trabajos for fila in tiempos_procesamiento):
         raise ValueError("La matriz de tiempos debe ser rectangular y no vacía")
-    _validar_permutacion_rapida(permutacion, trabajos)
+    _validar_permutacion(permutacion, trabajos)
 
-    finales = [0] * maquinas
-    for trabajo in permutacion:
-        anterior = 0
-        for maquina in range(maquinas):
-            inicio = max(finales[maquina], anterior)
-            anterior = inicio + tiempos_procesamiento[maquina][trabajo]
-            finales[maquina] = anterior
-    return finales[-1]
+    finales_trabajo = [0] * trabajos
+    makespan = 0
+    for pm in tiempos_procesamiento:
+        final_maquina = 0
+        for trabajo in permutacion:
+            final_previo = finales_trabajo[trabajo]
+            inicio = final_maquina if final_maquina > final_previo else final_previo
+            final_maquina = inicio + pm[trabajo]
+            finales_trabajo[trabajo] = final_maquina
+        makespan = final_maquina
+    return makespan

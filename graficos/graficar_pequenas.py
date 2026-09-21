@@ -10,12 +10,28 @@ CARPETA_GRAFICOS = Path(__file__).resolve().parent
 PROYECTO = CARPETA_GRAFICOS.parent
 
 
-def cargar(ruta: Path, metodo: str) -> pd.DataFrame:
+def cargar(
+    ruta: Path,
+    metodo: str,
+    limite_superior: float | None,
+    instancia: str,
+) -> pd.DataFrame:
     datos = pd.read_csv(ruta)
-    requeridas = {"semilla", "metodo", "instancia", "mejor_makespan", "limite_superior"}
+    requeridas = {"semilla", "mejor_makespan"}
     faltantes = requeridas - set(datos.columns)
     if faltantes:
-        raise ValueError(f"{ruta} no tiene el formato nuevo: faltan {sorted(faltantes)}")
+        raise ValueError(f"{ruta} no contiene las columnas: {sorted(faltantes)}")
+    if "limite_superior" not in datos:
+        if limite_superior is None:
+            raise ValueError(
+                f"{ruta} es un CSV antiguo; usa --limite-superior"
+            )
+        datos["limite_superior"] = limite_superior
+    if "metodo" not in datos:
+        datos["metodo"] = metodo
+    if "instancia" not in datos:
+        datos["instancia"] = instancia
+    datos["limite_superior"] = pd.to_numeric(datos["limite_superior"], errors="raise")
     datos = datos[datos["metodo"] == metodo].copy()
     if datos.empty or datos["instancia"].nunique() != 1:
         raise ValueError(f"{ruta} no contiene resultados validos de {metodo}")
@@ -26,10 +42,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Grafica AG y memetico en una instancia")
     parser.add_argument("ag", type=Path)
     parser.add_argument("memetico", type=Path)
+    parser.add_argument("--limite-superior", type=float)
+    parser.add_argument("--instancia", default="historica")
     parser.add_argument("--salida", type=Path, default=Path("graficos/grafico_escala_pequena.png"))
     args = parser.parse_args()
-    ag = cargar(args.ag, "genetico")
-    memetico = cargar(args.memetico, "memetico")
+    ag = cargar(args.ag, "genetico", args.limite_superior, args.instancia)
+    memetico = cargar(args.memetico, "memetico", args.limite_superior, args.instancia)
     if ag["instancia"].iloc[0] != memetico["instancia"].iloc[0]:
         raise ValueError("Los dos CSV deben corresponder a la misma instancia")
     for datos in (ag, memetico):

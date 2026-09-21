@@ -8,12 +8,25 @@ import pandas as pd
 from scipy.stats import wilcoxon
 
 
-def cargar_resultados(ruta: Path) -> pd.DataFrame:
+def cargar_resultados(
+    ruta: Path,
+    metodo: str,
+    instancia: str,
+    limite_superior: float | None,
+) -> pd.DataFrame:
     datos = pd.read_csv(ruta)
-    requeridas = {"semilla", "metodo", "instancia", "mejor_makespan", "limite_superior"}
+    requeridas = {"semilla", "mejor_makespan"}
     faltantes = requeridas - set(datos.columns)
     if faltantes:
         raise ValueError(f"{ruta} no contiene las columnas: {', '.join(sorted(faltantes))}")
+    if "limite_superior" not in datos:
+        if limite_superior is None:
+            raise ValueError(f"{ruta} es un CSV antiguo; usa --limite-superior")
+        datos["limite_superior"] = limite_superior
+    if "metodo" not in datos:
+        datos["metodo"] = metodo
+    if "instancia" not in datos:
+        datos["instancia"] = instancia
     datos["mejor_makespan"] = pd.to_numeric(datos["mejor_makespan"], errors="raise")
     datos["limite_superior"] = pd.to_numeric(datos["limite_superior"], errors="raise")
     datos["rpd"] = (
@@ -79,18 +92,25 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Compara AG y memetico con RPD y Wilcoxon")
     parser.add_argument("ag", type=Path)
     parser.add_argument("memetico", type=Path)
+    parser.add_argument("--limite-superior", type=float)
+    parser.add_argument("--instancia", default="historica")
     parser.add_argument("--salida", type=Path, default=Path("result/comparacion_metodos.csv"))
     args = parser.parse_args()
-    resumen, pvalor = comparar(cargar_resultados(args.ag), cargar_resultados(args.memetico))
-    args.salida.parent.mkdir(parents=True, exist_ok=True)
-    resumen.to_csv(args.salida, index=False)
+    resumen, pvalor = comparar(
+        cargar_resultados(args.ag, "genetico", args.instancia, args.limite_superior),
+        cargar_resultados(args.memetico, "memetico", args.instancia, args.limite_superior),
+    )
+    raiz = Path(__file__).resolve().parent
+    salida = args.salida if args.salida.is_absolute() else raiz / args.salida
+    salida.parent.mkdir(parents=True, exist_ok=True)
+    resumen.to_csv(salida, index=False)
     print(f"Wilcoxon: estadistico={resumen.attrs['estadistico_wilcoxon']}, pvalor={pvalor}")
-    print(f"Comparacion guardada en {args.salida}")
+    print(f"Comparacion guardada en {salida}")
 
 
 if __name__ == "__main__":
     try:
         main()
-    except (FileNotFoundError, ValueError, OSError) as error:
+    except (FileNotFoundError, ValueError, OSError, RuntimeWarning) as error:
         print(f"Error: {error}")
         raise SystemExit(2)
