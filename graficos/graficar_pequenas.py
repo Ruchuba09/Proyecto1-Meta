@@ -14,7 +14,7 @@ def cargar(
     ruta: Path,
     metodo: str | None,
     limite_superior: float | None,
-    instancia: str,
+    instancia: str | None,
 ) -> pd.DataFrame:
     datos = pd.read_csv(ruta)
     requeridas = {"semilla", "mejor_makespan"}
@@ -27,7 +27,8 @@ def cargar(
                 f"{ruta} es un CSV antiguo; usa --limite-superior"
             )
         datos["limite_superior"] = limite_superior
-    if "metodo" not in datos:
+    metodo_creado = "metodo" not in datos
+    if metodo_creado:
         if metodo is None:
             raise ValueError(f"{ruta} es un CSV antiguo; usa --metodo")
         datos["metodo"] = metodo
@@ -36,9 +37,10 @@ def cargar(
             raise ValueError(f"{ruta} es un CSV antiguo; usa --instancia")
         datos["instancia"] = instancia
     datos["limite_superior"] = pd.to_numeric(datos["limite_superior"], errors="raise")
-    datos = datos[datos["metodo"] == metodo].copy()
+    metodo_filtro = metodo if metodo_creado else datos["metodo"].iloc[0]
+    datos = datos[datos["metodo"] == metodo_filtro].copy()
     if datos.empty or datos["instancia"].nunique() != 1:
-        raise ValueError(f"{ruta} no contiene resultados validos de {metodo}")
+        raise ValueError(f"{ruta} no contiene resultados validos de {metodo_filtro}")
     return datos
 
 
