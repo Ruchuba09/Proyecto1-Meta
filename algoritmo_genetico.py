@@ -17,6 +17,7 @@ class ResultadoGenetico:
     mejor_permutacion: Permutacion
     mejor_fitness: int
     historial: tuple[int, ...]
+    mejor_generacion: int
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class ResultadoMemetico:
     mejor_permutacion: Permutacion
     mejor_fitness: int
     historial: tuple[int, ...]
+    mejor_generacion: int
 
 
 def generar_poblacion_inicial(
@@ -83,7 +85,8 @@ def cruce_ox(
     def crear_hijo(origen: Permutacion, relleno: Permutacion) -> Permutacion:
         hijo = [None] * len(origen)
         hijo[inicio:fin] = origen[inicio:fin]
-        restantes = [trabajo for trabajo in relleno if trabajo not in hijo]
+        segmento = set(origen[inicio:fin])
+        restantes = [trabajo for trabajo in relleno if trabajo not in segmento]
         posiciones = list(range(fin, len(hijo))) + list(range(0, inicio))
         for posicion, trabajo in zip(posiciones, restantes):
             hijo[posicion] = trabajo
@@ -133,12 +136,20 @@ def algoritmo_genetico(
     rng = random.Random(semilla)
     poblacion = generar_poblacion_inicial(trabajos, tamaño_poblacion, rng)
     historial = []
+    mejor_global = None
+    mejor_fitness = None
+    mejor_generacion = 0
 
-    for _ in range(generaciones + 1):
+    for generacion in range(generaciones + 1):
         fitnesses = [calcular_fitness(tiempos_procesamiento, individuo) for individuo in poblacion]
         orden = sorted(range(len(poblacion)), key=lambda indice: fitnesses[indice])
-        historial.append(fitnesses[orden[0]])
-        if _ == generaciones:
+        mejor_actual = fitnesses[orden[0]]
+        historial.append(mejor_actual)
+        if mejor_fitness is None or mejor_actual < mejor_fitness:
+            mejor_fitness = mejor_actual
+            mejor_global = poblacion[orden[0]]
+            mejor_generacion = generacion
+        if generacion == generaciones:
             break
 
         siguiente = [poblacion[indice] for indice in orden[:elitismo]]
@@ -151,28 +162,28 @@ def algoritmo_genetico(
                 siguiente.append(mutacion_intercambio(hijo2, rng, probabilidad_mutacion))
         poblacion = siguiente
 
-    mejor_indice = min(range(len(poblacion)), key=lambda indice: calcular_fitness(tiempos_procesamiento, poblacion[indice]))
-    mejor = poblacion[mejor_indice]
-    return ResultadoGenetico(mejor, calcular_fitness(tiempos_procesamiento, mejor), tuple(historial))
+    return ResultadoGenetico(
+        mejor_global, mejor_fitness, tuple(historial), mejor_generacion
+    )
 
 
-def busqueda_local_intercambio(
+def busqueda_local_insercion(
     tiempos_procesamiento: Sequence[Sequence[int]],
     individuo: Permutacion,
 ) -> Permutacion:
-    """Mejora una permutación con el primer intercambio que reduzca el fitness."""
+    """Mejora una permutación moviendo trabajos a otra posición."""
     actual = individuo
     fitness_actual = calcular_fitness(tiempos_procesamiento, actual)
     mejoro = True
     while mejoro:
         mejoro = False
-        for izquierda in range(len(actual) - 1):
-            for derecha in range(izquierda + 1, len(actual)):
+        for origen in range(len(actual)):
+            for destino in range(len(actual)):
+                if origen == destino:
+                    continue
                 candidato = list(actual)
-                candidato[izquierda], candidato[derecha] = (
-                    candidato[derecha],
-                    candidato[izquierda],
-                )
+                trabajo = candidato.pop(origen)
+                candidato.insert(destino, trabajo)
                 candidato = tuple(candidato)
                 fitness_candidato = calcular_fitness(tiempos_procesamiento, candidato)
                 if fitness_candidato < fitness_actual:
@@ -210,10 +221,18 @@ def algoritmo_memetico(
     rng = random.Random(semilla)
     poblacion = generar_poblacion_inicial(trabajos, tamaño_poblacion, rng)
     historial = []
+    mejor_global = None
+    mejor_fitness = None
+    mejor_generacion = 0
     for generacion in range(generaciones + 1):
         fitnesses = [calcular_fitness(tiempos_procesamiento, individuo) for individuo in poblacion]
         orden = sorted(range(len(poblacion)), key=lambda indice: fitnesses[indice])
-        historial.append(fitnesses[orden[0]])
+        mejor_actual = fitnesses[orden[0]]
+        historial.append(mejor_actual)
+        if mejor_fitness is None or mejor_actual < mejor_fitness:
+            mejor_fitness = mejor_actual
+            mejor_global = poblacion[orden[0]]
+            mejor_generacion = generacion
         if generacion == generaciones:
             break
 
@@ -226,19 +245,15 @@ def algoritmo_memetico(
             if len(siguiente) + len(hijos) < tamaño_poblacion:
                 hijos.append(mutacion_intercambio(hijo2, rng, probabilidad_mutacion))
             if generacion % frecuencia_busqueda == 0:
-                hijos = [busqueda_local_intercambio(tiempos_procesamiento, hijo) for hijo in hijos]
+                hijos = [busqueda_local_insercion(tiempos_procesamiento, hijo) for hijo in hijos]
             siguiente.extend(hijos)
         poblacion = siguiente
 
-    mejor_indice = min(
-        range(len(poblacion)),
-        key=lambda indice: calcular_fitness(tiempos_procesamiento, poblacion[indice]),
-    )
-    mejor = poblacion[mejor_indice]
     return ResultadoMemetico(
-        mejor,
-        calcular_fitness(tiempos_procesamiento, mejor),
+        mejor_global,
+        mejor_fitness,
         tuple(historial),
+        mejor_generacion,
     )
 
 
@@ -257,5 +272,10 @@ def _validar_probabilidad(probabilidad: float, nombre: str) -> None:
 
 
 def _validar_padres(padre1: Permutacion, padre2: Permutacion) -> None:
-    if len(padre1) != len(padre2) or set(padre1) != set(padre2):
+    if (
+        len(padre1) != len(padre2)
+        or len(set(padre1)) != len(padre1)
+        or len(set(padre2)) != len(padre2)
+        or set(padre1) != set(padre2)
+    ):
         raise ValueError("Los padres deben ser permutaciones del mismo conjunto")
