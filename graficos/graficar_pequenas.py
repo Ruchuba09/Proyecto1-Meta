@@ -12,6 +12,7 @@ PROYECTO = CARPETA_GRAFICOS.parent
 
 def cargar(
     ruta: Path,
+    metodo_esperado: str,
     metodo: str | None,
     limite_superior: float | None,
     instancia: str | None,
@@ -31,16 +32,25 @@ def cargar(
     if metodo_creado:
         if metodo is None:
             raise ValueError(f"{ruta} es un CSV antiguo; usa --metodo")
+        if metodo != metodo_esperado:
+            raise ValueError(
+                f"{ruta} debe identificarse como {metodo_esperado}, no como {metodo}"
+            )
         datos["metodo"] = metodo
     if "instancia" not in datos:
         if instancia is None:
             raise ValueError(f"{ruta} es un CSV antiguo; usa --instancia")
         datos["instancia"] = instancia
     datos["limite_superior"] = pd.to_numeric(datos["limite_superior"], errors="raise")
-    metodo_filtro = metodo if metodo_creado else datos["metodo"].iloc[0]
-    datos = datos[datos["metodo"] == metodo_filtro].copy()
+    if not metodo_creado:
+        metodos_presentes = set(datos["metodo"])
+        if metodos_presentes != {metodo_esperado}:
+            raise ValueError(
+                f"{ruta} contiene metodos inesperados: {metodos_presentes}"
+            )
+    datos = datos[datos["metodo"] == metodo_esperado].copy()
     if datos.empty or datos["instancia"].nunique() != 1:
-        raise ValueError(f"{ruta} no contiene resultados validos de {metodo_filtro}")
+        raise ValueError(f"{ruta} no contiene resultados validos de {metodo_esperado}")
     return datos
 
 
@@ -55,9 +65,12 @@ def main() -> None:
     parser.add_argument("--instancia-memetico")
     parser.add_argument("--salida", type=Path, default=Path("graficos/grafico_escala_pequena.png"))
     args = parser.parse_args()
-    ag = cargar(args.ag, args.metodo_ag, args.limite_superior, args.instancia_ag)
+    ag = cargar(
+        args.ag, "genetico", args.metodo_ag, args.limite_superior, args.instancia_ag
+    )
     memetico = cargar(
         args.memetico,
+        "memetico",
         args.metodo_memetico,
         args.limite_superior,
         args.instancia_memetico,
