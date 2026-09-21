@@ -12,7 +12,7 @@ PROYECTO = CARPETA_GRAFICOS.parent
 
 def cargar(
     ruta: Path,
-    metodo: str,
+    metodo: str | None,
     limite_superior: float | None,
     instancia: str,
 ) -> pd.DataFrame:
@@ -28,8 +28,12 @@ def cargar(
             )
         datos["limite_superior"] = limite_superior
     if "metodo" not in datos:
+        if metodo is None:
+            raise ValueError(f"{ruta} es un CSV antiguo; usa --metodo")
         datos["metodo"] = metodo
     if "instancia" not in datos:
+        if instancia is None:
+            raise ValueError(f"{ruta} es un CSV antiguo; usa --instancia")
         datos["instancia"] = instancia
     datos["limite_superior"] = pd.to_numeric(datos["limite_superior"], errors="raise")
     datos = datos[datos["metodo"] == metodo].copy()
@@ -42,12 +46,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Grafica AG y memetico en una instancia")
     parser.add_argument("ag", type=Path)
     parser.add_argument("memetico", type=Path)
+    parser.add_argument("--metodo-ag", choices=("genetico", "memetico"))
+    parser.add_argument("--metodo-memetico", choices=("genetico", "memetico"))
     parser.add_argument("--limite-superior", type=float)
-    parser.add_argument("--instancia", default="historica")
+    parser.add_argument("--instancia-ag")
+    parser.add_argument("--instancia-memetico")
     parser.add_argument("--salida", type=Path, default=Path("graficos/grafico_escala_pequena.png"))
     args = parser.parse_args()
-    ag = cargar(args.ag, "genetico", args.limite_superior, args.instancia)
-    memetico = cargar(args.memetico, "memetico", args.limite_superior, args.instancia)
+    ag = cargar(args.ag, args.metodo_ag, args.limite_superior, args.instancia_ag)
+    memetico = cargar(
+        args.memetico,
+        args.metodo_memetico,
+        args.limite_superior,
+        args.instancia_memetico,
+    )
     if ag["instancia"].iloc[0] != memetico["instancia"].iloc[0]:
         raise ValueError("Los dos CSV deben corresponder a la misma instancia")
     for datos in (ag, memetico):
@@ -73,4 +85,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (FileNotFoundError, ValueError, OSError) as error:
+        print(f"Error: {error}")
+        raise SystemExit(2)

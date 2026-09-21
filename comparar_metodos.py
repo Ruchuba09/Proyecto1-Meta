@@ -10,8 +10,8 @@ from scipy.stats import wilcoxon
 
 def cargar_resultados(
     ruta: Path,
-    metodo: str,
-    instancia: str,
+    metodo: str | None,
+    instancia: str | None,
     limite_superior: float | None,
 ) -> pd.DataFrame:
     datos = pd.read_csv(ruta)
@@ -24,8 +24,12 @@ def cargar_resultados(
             raise ValueError(f"{ruta} es un CSV antiguo; usa --limite-superior")
         datos["limite_superior"] = limite_superior
     if "metodo" not in datos:
+        if metodo is None:
+            raise ValueError(f"{ruta} es un CSV antiguo; usa --metodo para identificarlo")
         datos["metodo"] = metodo
     if "instancia" not in datos:
+        if instancia is None:
+            raise ValueError(f"{ruta} es un CSV antiguo; usa --instancia para identificarlo")
         datos["instancia"] = instancia
     datos["mejor_makespan"] = pd.to_numeric(datos["mejor_makespan"], errors="raise")
     datos["limite_superior"] = pd.to_numeric(datos["limite_superior"], errors="raise")
@@ -93,12 +97,20 @@ def main() -> None:
     parser.add_argument("ag", type=Path)
     parser.add_argument("memetico", type=Path)
     parser.add_argument("--limite-superior", type=float)
-    parser.add_argument("--instancia", default="historica")
+    parser.add_argument("--instancia-ag")
+    parser.add_argument("--instancia-memetico")
+    parser.add_argument("--metodo-ag", choices=("genetico", "memetico"))
+    parser.add_argument("--metodo-memetico", choices=("genetico", "memetico"))
     parser.add_argument("--salida", type=Path, default=Path("result/comparacion_metodos.csv"))
     args = parser.parse_args()
     resumen, pvalor = comparar(
-        cargar_resultados(args.ag, "genetico", args.instancia, args.limite_superior),
-        cargar_resultados(args.memetico, "memetico", args.instancia, args.limite_superior),
+        cargar_resultados(args.ag, args.metodo_ag, args.instancia_ag, args.limite_superior),
+        cargar_resultados(
+            args.memetico,
+            args.metodo_memetico,
+            args.instancia_memetico,
+            args.limite_superior,
+        ),
     )
     raiz = Path(__file__).resolve().parent
     salida = args.salida if args.salida.is_absolute() else raiz / args.salida
