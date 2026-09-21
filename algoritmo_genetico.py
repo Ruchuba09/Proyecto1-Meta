@@ -17,6 +17,7 @@ class ResultadoGenetico:
     mejor_permutacion: Permutacion
     mejor_fitness: int
     historial: tuple[int, ...]
+    mejor_generacion: int
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,7 @@ class ResultadoMemetico:
     mejor_permutacion: Permutacion
     mejor_fitness: int
     historial: tuple[int, ...]
+    mejor_generacion: int
 
 
 def generar_poblacion_inicial(
@@ -83,7 +85,8 @@ def cruce_ox(
     def crear_hijo(origen: Permutacion, relleno: Permutacion) -> Permutacion:
         hijo = [None] * len(origen)
         hijo[inicio:fin] = origen[inicio:fin]
-        restantes = [trabajo for trabajo in relleno if trabajo not in hijo]
+        segmento = set(origen[inicio:fin])
+        restantes = [trabajo for trabajo in relleno if trabajo not in segmento]
         posiciones = list(range(fin, len(hijo))) + list(range(0, inicio))
         for posicion, trabajo in zip(posiciones, restantes):
             hijo[posicion] = trabajo
@@ -133,11 +136,19 @@ def algoritmo_genetico(
     rng = random.Random(semilla)
     poblacion = generar_poblacion_inicial(trabajos, tamaño_poblacion, rng)
     historial = []
+    mejor_global = None
+    mejor_fitness = None
+    mejor_generacion = 0
 
     for generacion in range(generaciones + 1):
         fitnesses = [calcular_fitness(tiempos_procesamiento, individuo) for individuo in poblacion]
         orden = sorted(range(len(poblacion)), key=lambda indice: fitnesses[indice])
-        historial.append(fitnesses[orden[0]])
+        mejor_actual = fitnesses[orden[0]]
+        historial.append(mejor_actual)
+        if mejor_fitness is None or mejor_actual < mejor_fitness:
+            mejor_fitness = mejor_actual
+            mejor_global = poblacion[orden[0]]
+            mejor_generacion = generacion
         if generacion == generaciones:
             break
 
@@ -151,9 +162,9 @@ def algoritmo_genetico(
                 siguiente.append(mutacion_intercambio(hijo2, rng, probabilidad_mutacion))
         poblacion = siguiente
 
-    mejor_indice = min(range(len(poblacion)), key=lambda indice: calcular_fitness(tiempos_procesamiento, poblacion[indice]))
-    mejor = poblacion[mejor_indice]
-    return ResultadoGenetico(mejor, calcular_fitness(tiempos_procesamiento, mejor), tuple(historial))
+    return ResultadoGenetico(
+        mejor_global, mejor_fitness, tuple(historial), mejor_generacion
+    )
 
 
 def busqueda_local_insercion(
@@ -210,10 +221,18 @@ def algoritmo_memetico(
     rng = random.Random(semilla)
     poblacion = generar_poblacion_inicial(trabajos, tamaño_poblacion, rng)
     historial = []
+    mejor_global = None
+    mejor_fitness = None
+    mejor_generacion = 0
     for generacion in range(generaciones + 1):
         fitnesses = [calcular_fitness(tiempos_procesamiento, individuo) for individuo in poblacion]
         orden = sorted(range(len(poblacion)), key=lambda indice: fitnesses[indice])
-        historial.append(fitnesses[orden[0]])
+        mejor_actual = fitnesses[orden[0]]
+        historial.append(mejor_actual)
+        if mejor_fitness is None or mejor_actual < mejor_fitness:
+            mejor_fitness = mejor_actual
+            mejor_global = poblacion[orden[0]]
+            mejor_generacion = generacion
         if generacion == generaciones:
             break
 
@@ -230,15 +249,11 @@ def algoritmo_memetico(
             siguiente.extend(hijos)
         poblacion = siguiente
 
-    mejor_indice = min(
-        range(len(poblacion)),
-        key=lambda indice: calcular_fitness(tiempos_procesamiento, poblacion[indice]),
-    )
-    mejor = poblacion[mejor_indice]
     return ResultadoMemetico(
-        mejor,
-        calcular_fitness(tiempos_procesamiento, mejor),
+        mejor_global,
+        mejor_fitness,
         tuple(historial),
+        mejor_generacion,
     )
 
 
@@ -257,5 +272,10 @@ def _validar_probabilidad(probabilidad: float, nombre: str) -> None:
 
 
 def _validar_padres(padre1: Permutacion, padre2: Permutacion) -> None:
-    if len(padre1) != len(padre2) or set(padre1) != set(padre2):
+    if (
+        len(padre1) != len(padre2)
+        or len(set(padre1)) != len(padre1)
+        or len(set(padre2)) != len(padre2)
+        or set(padre1) != set(padre2)
+    ):
         raise ValueError("Los padres deben ser permutaciones del mismo conjunto")

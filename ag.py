@@ -73,7 +73,7 @@ def main() -> None:
             argumentos.probabilidad_cruce, argumentos.probabilidad_mutacion,
             argumentos.numero_iteraciones,
             argumentos.frecuencia_busqueda if argumentos.metodo == "memetico" else "",
-            tiempo, resultado.historial.index(min(resultado.historial)),
+            tiempo, resultado.mejor_generacion,
             resultado.mejor_fitness, instancia.limite_superior,
             instancia.limite_inferior, rpd, list(resultado.mejor_permutacion),
         ])

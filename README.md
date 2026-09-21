@@ -91,8 +91,10 @@ Proyecto1-Meta/
 ├── taillard/                  # Instancias ta001 … ta120 (Taillard, 1993)
 ├── result/                    # CSV de resultados de las corridas
 ├── graficos/                  # Scripts de gráficas y sus imágenes (.png)
-│   ├── graficar_resultados.py
-│   └── graficar_pequenas.py
+│   ├── graficar_grande.py
+│   ├── graficar_mediana.py
+│   ├── graficar_pequenas.py
+│   └── graficar_comparacion_ta051.py
 ├── paper_instances/           # Dataset original del artículo (no lo usa el código)
 ├── Proyecto_PFSP_Enunciado.pdf
 └── .gitignore
@@ -251,8 +253,10 @@ Los scripts de `graficos/` se ejecutan desde cualquier carpeta y guardan su
 imagen en `graficos/`:
 
 ```bash
-python graficos/graficar_resultados.py   # makespan por corrida -> mejor_makespan_por_corrida.png
-python graficos/graficar_pequenas.py     # RPD por corrida       -> grafico_escala_pequena.png
+python graficos/graficar_grande.py       # makespan por corrida -> mejor_makespan_por_corrida.png
+python graficos/graficar_mediana.py      # resultados de ta041 -> grafico_ta041.png
+python graficos/graficar_pequenas.py AG.csv memetico.csv
+python graficos/graficar_comparacion_ta051.py
 ```
 
 Los CSV de entrada se definen como constantes al inicio de cada script.
@@ -301,11 +305,12 @@ además la semilla y las cotas superior/inferior (`limite_superior`,
 python -m unittest pruebas -v
 ```
 
-Las 9 pruebas cubren: lectura del parser, cálculo de tiempos de finalización y
-fitness con un ejemplo pequeño, rechazo de permutaciones inválidas, validez de
-población y operadores, selección por torneo, reproducibilidad del AG y del
-memético, y que la búsqueda local no empeora la solución y conserva la
-permutación.
+Las pruebas cubren: lectura del parser, cálculo de tiempos de finalización y
+fitness rápido con un ejemplo pequeño, rechazo de permutaciones inválidas,
+validez de población y operadores, selección por torneo, mejor global con
+elitismo cero, reproducibilidad del AG y del memético, búsqueda local por
+inserción, RPD con cota cero, validación de instancias y semillas, y empate
+total en Wilcoxon.
 
 ## 8. Resultados y comparación estadística
 

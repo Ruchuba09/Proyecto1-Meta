@@ -20,7 +20,12 @@ df = pd.read_csv(ARCHIVO_CSV)
 df["mejor_makespan"] = pd.to_numeric(df["mejor_makespan"], errors="coerce")
 df = df.sort_values("semilla").reset_index(drop=True)
 
-cref = 3025  # Cota de Taillard para ta041
+if "limite_superior" not in df:
+    raise ValueError("El CSV debe contener la columna limite_superior")
+df["limite_superior"] = pd.to_numeric(df["limite_superior"], errors="raise")
+if df["limite_superior"].nunique() != 1:
+    raise ValueError("El CSV debe usar una sola cota superior")
+cref = df["limite_superior"].iloc[0]
 
 # Graficar
 plt.figure(figsize=(7, 4), dpi=300)
@@ -48,7 +53,9 @@ plt.title(
 plt.xlabel("Número de corrida (Semilla)", fontsize=10)
 plt.ylabel("Mejor Makespan", fontsize=10)
 plt.xticks(df["semilla"])
-plt.ylim(3015, 3075)
+valores = pd.concat([df["mejor_makespan"], pd.Series([cref])])
+margen = max(1, (valores.max() - valores.min()) * 0.1)
+plt.ylim(valores.min() - margen, valores.max() + margen)
 plt.grid(True, linestyle="--", alpha=0.6)
 plt.legend(loc="upper right", frameon=True, fontsize=9)
 plt.tight_layout()

@@ -2,6 +2,7 @@
 
 import argparse
 from pathlib import Path
+import warnings
 
 import pandas as pd
 from scipy.stats import wilcoxon
@@ -15,7 +16,11 @@ def cargar_resultados(ruta: Path) -> pd.DataFrame:
         raise ValueError(f"{ruta} no contiene las columnas: {', '.join(sorted(faltantes))}")
     datos["mejor_makespan"] = pd.to_numeric(datos["mejor_makespan"], errors="raise")
     datos["limite_superior"] = pd.to_numeric(datos["limite_superior"], errors="raise")
-    datos["rpd"] = 100 * (datos["mejor_makespan"] - datos["limite_superior"]) / datos["limite_superior"]
+    datos["rpd"] = (
+        100 * (datos["mejor_makespan"] - datos["limite_superior"])
+        .where(datos["limite_superior"] != 0)
+        / datos["limite_superior"].where(datos["limite_superior"] != 0)
+    )
     return datos
 
 
@@ -38,9 +43,11 @@ def comparar(ag: pd.DataFrame, memetico: pd.DataFrame) -> tuple[pd.DataFrame, fl
         raise ValueError("AG y memetico deben corresponder a la misma instancia")
     for datos in (ag, memetico):
         if "rpd" not in datos:
-            datos["rpd"] = 100 * (
-                datos["mejor_makespan"] - datos["limite_superior"]
-            ) / datos["limite_superior"]
+            datos["rpd"] = (
+                100 * (datos["mejor_makespan"] - datos["limite_superior"])
+                .where(datos["limite_superior"] != 0)
+                / datos["limite_superior"].where(datos["limite_superior"] != 0)
+            )
     ag = ag[ag["metodo"] == "genetico"].set_index("semilla")
     memetico = memetico[memetico["metodo"] == "memetico"].set_index("semilla")
     semillas = ag.index.intersection(memetico.index)
@@ -50,7 +57,12 @@ def comparar(ag: pd.DataFrame, memetico: pd.DataFrame) -> tuple[pd.DataFrame, fl
         raise ValueError("Se necesitan al menos dos semillas compartidas para Wilcoxon")
     ag = ag.loc[semillas]
     memetico = memetico.loc[semillas]
-    estadistico, pvalor = wilcoxon(ag["mejor_makespan"], memetico["mejor_makespan"])
+    diferencias = ag["mejor_makespan"].to_numpy() - memetico["mejor_makespan"].to_numpy()
+    if (diferencias == 0).all():
+        raise ValueError("AG y memetico empatan en todas las semillas; Wilcoxon no es informativo")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        estadistico, pvalor = wilcoxon(ag["mejor_makespan"], memetico["mejor_makespan"])
     resumen = pd.DataFrame({
         "semilla": semillas,
         "makespan_genetico": ag["mejor_makespan"].to_numpy(),

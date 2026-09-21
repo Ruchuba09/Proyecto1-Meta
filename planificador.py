@@ -80,10 +80,32 @@ def leer_instancia(ruta: str | Path) -> Instancia:
 
 def _validar_permutacion(permutacion: Sequence[int], trabajos: int) -> None:
     """Comprueba que cada trabajo aparezca exactamente una vez."""
-    if len(permutacion) != trabajos or set(permutacion) != set(range(trabajos)):
+    vistos = [False] * trabajos
+    if len(permutacion) != trabajos:
         raise ValueError(
             f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
         )
+    for trabajo in permutacion:
+        if not isinstance(trabajo, int) or trabajo < 0 or trabajo >= trabajos or vistos[trabajo]:
+            raise ValueError(
+                f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
+            )
+        vistos[trabajo] = True
+
+
+def _validar_permutacion_rapida(permutacion: Sequence[int], trabajos: int) -> None:
+    """Valida una permutación sin crear conjuntos durante el AG."""
+    vistos = [False] * trabajos
+    if len(permutacion) != trabajos:
+        raise ValueError(
+            f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
+        )
+    for trabajo in permutacion:
+        if not isinstance(trabajo, int) or trabajo < 0 or trabajo >= trabajos or vistos[trabajo]:
+            raise ValueError(
+                f"La permutación debe contener exactamente los trabajos 0 a {trabajos - 1}"
+            )
+        vistos[trabajo] = True
 
 
 def tiempos_finalizacion(
@@ -119,5 +141,19 @@ def calcular_fitness(
     permutacion: Sequence[int],
 ) -> int:
     """Devuelve el makespan de una permutación; menor valor es mejor."""
-    # El makespan es la finalización del último trabajo en la última máquina.
-    return tiempos_finalizacion(tiempos_procesamiento, permutacion)[-1][-1]
+    maquinas = len(tiempos_procesamiento)
+    if maquinas == 0:
+        raise ValueError("Debe existir al menos una máquina")
+    trabajos = len(tiempos_procesamiento[0])
+    if trabajos == 0 or any(len(fila) != trabajos for fila in tiempos_procesamiento):
+        raise ValueError("La matriz de tiempos debe ser rectangular y no vacía")
+    _validar_permutacion_rapida(permutacion, trabajos)
+
+    finales = [0] * maquinas
+    for trabajo in permutacion:
+        anterior = 0
+        for maquina in range(maquinas):
+            inicio = max(finales[maquina], anterior)
+            anterior = inicio + tiempos_procesamiento[maquina][trabajo]
+            finales[maquina] = anterior
+    return finales[-1]

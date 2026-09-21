@@ -55,6 +55,10 @@ class PruebasPfsp(unittest.TestCase):
         self.assertEqual(set(hijo2), set(range(5)))
         self.assertEqual(set(mutado), set(range(5)))
 
+    def test_cruce_rechaza_padres_con_repeticiones(self):
+        with self.assertRaises(ValueError):
+            cruce_ox((0, 0, 1), (0, 1, 1), random.Random(1), 1.0)
+
     def test_seleccion_torneo_prefiere_el_mejor_fitness(self):
         class RngDeterminista:
             def __init__(self):
@@ -85,6 +89,35 @@ class PruebasPfsp(unittest.TestCase):
         self.assertLessEqual(resultado1.historial[-1], resultado1.historial[0])
         self.assertEqual(resultado1.mejor_fitness, 10)
 
+    def test_algoritmo_genetico_conserva_mejor_global_sin_elitismo(self):
+        tiempos = ((2, 5, 1), (4, 2, 3))
+        resultado = algoritmo_genetico(
+            tiempos, tamaño_poblacion=6, generaciones=8,
+            probabilidad_cruce=0.9, probabilidad_mutacion=0.8,
+            elitismo=0, semilla=1,
+        )
+        self.assertEqual(resultado.mejor_fitness, min(resultado.historial))
+        self.assertEqual(resultado.mejor_generacion, resultado.historial.index(min(resultado.historial)))
+        self.assertEqual(calcular_fitness(tiempos, resultado.mejor_permutacion), resultado.mejor_fitness)
+
+    def test_algoritmo_memetico_conserva_mejor_global_sin_elitismo(self):
+        tiempos = ((2, 5, 1), (4, 2, 3))
+        resultado = algoritmo_memetico(
+            tiempos, tamaño_poblacion=6, generaciones=8,
+            probabilidad_cruce=0.9, probabilidad_mutacion=0.8,
+            elitismo=0, semilla=1, frecuencia_busqueda=2,
+        )
+        self.assertEqual(resultado.mejor_fitness, min(resultado.historial))
+        self.assertEqual(calcular_fitness(tiempos, resultado.mejor_permutacion), resultado.mejor_fitness)
+
+    def test_fitness_rapido_coincide_con_tiempos_finalizacion(self):
+        tiempos = ((2, 5, 1), (4, 2, 3), (3, 1, 2))
+        for permutacion in ((0, 1, 2), (2, 0, 1), (1, 2, 0)):
+            self.assertEqual(
+                calcular_fitness(tiempos, permutacion),
+                tiempos_finalizacion(tiempos, permutacion)[-1][-1],
+            )
+
     def test_busqueda_local_no_empeora_la_solucion(self):
         tiempos = ((2, 5, 1), (4, 2, 3))
         inicial = (0, 1, 2)
@@ -114,6 +147,13 @@ class PruebasPfsp(unittest.TestCase):
         base = {"semilla": [1, 1], "limite_superior": [100, 100], "mejor_makespan": [110, 111]}
         ag = pd.DataFrame({**base, "metodo": "genetico", "instancia": "ta001"})
         memetico = pd.DataFrame({**base, "metodo": "memetico", "instancia": "ta001"})
+        with self.assertRaises(ValueError):
+            comparar(ag, memetico)
+
+    def test_comparacion_rechaza_empate_total(self):
+        base = {"semilla": [1, 2], "limite_superior": [0, 0], "mejor_makespan": [110, 111]}
+        ag = pd.DataFrame({**base, "metodo": "genetico", "instancia": "paper"})
+        memetico = pd.DataFrame({**base, "metodo": "memetico", "instancia": "paper"})
         with self.assertRaises(ValueError):
             comparar(ag, memetico)
 
