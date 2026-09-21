@@ -75,3 +75,17 @@ py -3 comparar_metodos.py result/ag.csv result/memetico.csv --limite-superior 12
 
 Los flags de instancia y método solo son necesarios cuando esas columnas no
 existen en el CSV.
+
+## 6. Formato de resultados y gráficos
+
+Los CSV nuevos incluyen `metodo`, `instancia` y `limite_superior`, por lo que
+los scripts pueden inferir esos datos. Para CSV antiguos, que no contienen
+esas columnas, hay que proporcionar explícitamente `--limite-superior`,
+`--metodo-ag`, `--metodo-memetico`, `--instancia-ag` y
+`--instancia-memetico` a `graficar_pequenas.py` o `comparar_metodos.py`.
+
+Por ejemplo:
+
+```powershell
+py -3 comparar_metodos.py result/ag.csv result/memetico.csv --limite-superior 1278 --instancia-ag ta001 --instancia-memetico ta001 --metodo-ag genetico --metodo-memetico memetico
+```

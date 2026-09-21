@@ -83,7 +83,7 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
-    except (FileNotFoundError, ValueError, OSError) as error:
+    except (ValueError, OSError) as error:
         print(f"Error: {error}", file=__import__("sys").stderr)
         raise SystemExit(2)
 
