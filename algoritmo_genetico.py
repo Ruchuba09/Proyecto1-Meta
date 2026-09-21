@@ -185,14 +185,6 @@ def busqueda_local_insercion(
     return actual
 
 
-def busqueda_local_intercambio(
-    tiempos_procesamiento: Sequence[Sequence[int]],
-    individuo: Permutacion,
-) -> Permutacion:
-    """Alias compatible con el nombre anterior del operador local."""
-    return busqueda_local_insercion(tiempos_procesamiento, individuo)
-
-
 def algoritmo_memetico(
     tiempos_procesamiento: Sequence[Sequence[int]],
     tamaño_poblacion: int = 50,

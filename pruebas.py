@@ -3,17 +3,19 @@ import unittest
 import random
 from pathlib import Path
 
+import pandas as pd
+
 from algoritmo_genetico import (
     algoritmo_genetico,
     algoritmo_memetico,
     busqueda_local_insercion,
-    busqueda_local_intercambio,
     cruce_ox,
     generar_poblacion_inicial,
     mutacion_intercambio,
     seleccion_torneo,
 )
 from planificador import calcular_fitness, leer_instancia, tiempos_finalizacion
+from comparar_metodos import comparar
 
 
 class PruebasPfsp(unittest.TestCase):
@@ -86,7 +88,7 @@ class PruebasPfsp(unittest.TestCase):
     def test_busqueda_local_no_empeora_la_solucion(self):
         tiempos = ((2, 5, 1), (4, 2, 3))
         inicial = (0, 1, 2)
-        mejorada = busqueda_local_intercambio(tiempos, inicial)
+        mejorada = busqueda_local_insercion(tiempos, inicial)
         self.assertLessEqual(calcular_fitness(tiempos, mejorada), calcular_fitness(tiempos, inicial))
 
     def test_busqueda_local_por_insercion_conserva_la_permutacion(self):
@@ -100,6 +102,20 @@ class PruebasPfsp(unittest.TestCase):
         resultado = algoritmo_memetico(tiempos, tamaño_poblacion=8, generaciones=5, semilla=7)
         self.assertEqual(resultado.mejor_fitness, 10)
         self.assertEqual(resultado, algoritmo_memetico(tiempos, tamaño_poblacion=8, generaciones=5, semilla=7))
+
+    def test_comparacion_rechaza_instancias_mezcladas(self):
+        base = {"semilla": [1, 2], "limite_superior": [100, 100], "mejor_makespan": [110, 111]}
+        ag = pd.DataFrame({**base, "metodo": "genetico", "instancia": ["ta001", "ta002"]})
+        memetico = pd.DataFrame({**base, "metodo": "memetico", "instancia": ["ta001", "ta001"]})
+        with self.assertRaises(ValueError):
+            comparar(ag, memetico)
+
+    def test_comparacion_rechaza_semillas_repetidas(self):
+        base = {"semilla": [1, 1], "limite_superior": [100, 100], "mejor_makespan": [110, 111]}
+        ag = pd.DataFrame({**base, "metodo": "genetico", "instancia": "ta001"})
+        memetico = pd.DataFrame({**base, "metodo": "memetico", "instancia": "ta001"})
+        with self.assertRaises(ValueError):
+            comparar(ag, memetico)
 
 
 if __name__ == "__main__":

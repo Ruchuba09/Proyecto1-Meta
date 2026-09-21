@@ -190,7 +190,7 @@ rpd = (memetico.mejor_fitness - instancia.limite_superior) / instancia.limite_su
 
 Funciones reutilizables de `algoritmo_genetico.py`: `generar_poblacion_inicial`,
 `seleccion_torneo`, `cruce_ox`, `mutacion_intercambio` y
-`busqueda_local_intercambio`. En `planificador.py`: `leer_instancia`,
+`busqueda_local_insercion`. En `planificador.py`: `leer_instancia`,
 `tiempos_finalizacion` y `calcular_fitness`.
 
 ### 5.3 Experimento de 30 corridas

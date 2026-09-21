@@ -33,6 +33,17 @@ def main() -> None:
     salida = argumentos.salida if argumentos.salida.is_absolute() else raiz / "result" / argumentos.salida
     instancia = leer_instancia(entrada)
 
+    salida.parent.mkdir(parents=True, exist_ok=True)
+    existe = salida.exists() and salida.stat().st_size > 0
+    if existe:
+        with salida.open("r", encoding="utf-8-sig", newline="") as archivo:
+            encabezado = next(csv.reader(archivo), [])
+        if encabezado != ENCABEZADOS_RESULTADO:
+            raise ValueError(
+                f"{salida} usa un formato CSV antiguo o incompatible; "
+                "elige otro archivo de salida"
+            )
+
     inicio = time.perf_counter()
     ejecutar = algoritmo_memetico if argumentos.metodo == "memetico" else algoritmo_genetico
     opciones = {
@@ -46,16 +57,6 @@ def main() -> None:
         opciones["frecuencia_busqueda"] = argumentos.frecuencia_busqueda
     resultado = ejecutar(instancia.tiempos_procesamiento, **opciones)
     tiempo = time.perf_counter() - inicio
-    salida.parent.mkdir(parents=True, exist_ok=True)
-    existe = salida.exists() and salida.stat().st_size > 0
-    if existe:
-        with salida.open("r", encoding="utf-8-sig", newline="") as archivo:
-            encabezado = next(csv.reader(archivo), [])
-        if encabezado != ENCABEZADOS_RESULTADO:
-            raise ValueError(
-                f"{salida} usa un formato CSV antiguo o incompatible; "
-                "elige otro archivo de salida"
-            )
     with salida.open("a", encoding="utf-8", newline="") as archivo:
         escritor = csv.writer(archivo)
         if not existe:
