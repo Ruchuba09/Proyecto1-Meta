@@ -134,11 +134,11 @@ def algoritmo_genetico(
     poblacion = generar_poblacion_inicial(trabajos, tamaño_poblacion, rng)
     historial = []
 
-    for _ in range(generaciones + 1):
+    for generacion in range(generaciones + 1):
         fitnesses = [calcular_fitness(tiempos_procesamiento, individuo) for individuo in poblacion]
         orden = sorted(range(len(poblacion)), key=lambda indice: fitnesses[indice])
         historial.append(fitnesses[orden[0]])
-        if _ == generaciones:
+        if generacion == generaciones:
             break
 
         siguiente = [poblacion[indice] for indice in orden[:elitismo]]
@@ -156,23 +156,23 @@ def algoritmo_genetico(
     return ResultadoGenetico(mejor, calcular_fitness(tiempos_procesamiento, mejor), tuple(historial))
 
 
-def busqueda_local_intercambio(
+def busqueda_local_insercion(
     tiempos_procesamiento: Sequence[Sequence[int]],
     individuo: Permutacion,
 ) -> Permutacion:
-    """Mejora una permutación con el primer intercambio que reduzca el fitness."""
+    """Mejora una permutación moviendo trabajos a otra posición."""
     actual = individuo
     fitness_actual = calcular_fitness(tiempos_procesamiento, actual)
     mejoro = True
     while mejoro:
         mejoro = False
-        for izquierda in range(len(actual) - 1):
-            for derecha in range(izquierda + 1, len(actual)):
+        for origen in range(len(actual)):
+            for destino in range(len(actual)):
+                if origen == destino:
+                    continue
                 candidato = list(actual)
-                candidato[izquierda], candidato[derecha] = (
-                    candidato[derecha],
-                    candidato[izquierda],
-                )
+                trabajo = candidato.pop(origen)
+                candidato.insert(destino, trabajo)
                 candidato = tuple(candidato)
                 fitness_candidato = calcular_fitness(tiempos_procesamiento, candidato)
                 if fitness_candidato < fitness_actual:
@@ -183,6 +183,14 @@ def busqueda_local_intercambio(
             if mejoro:
                 break
     return actual
+
+
+def busqueda_local_intercambio(
+    tiempos_procesamiento: Sequence[Sequence[int]],
+    individuo: Permutacion,
+) -> Permutacion:
+    """Alias compatible con el nombre anterior del operador local."""
+    return busqueda_local_insercion(tiempos_procesamiento, individuo)
 
 
 def algoritmo_memetico(
@@ -226,7 +234,7 @@ def algoritmo_memetico(
             if len(siguiente) + len(hijos) < tamaño_poblacion:
                 hijos.append(mutacion_intercambio(hijo2, rng, probabilidad_mutacion))
             if generacion % frecuencia_busqueda == 0:
-                hijos = [busqueda_local_intercambio(tiempos_procesamiento, hijo) for hijo in hijos]
+                hijos = [busqueda_local_insercion(tiempos_procesamiento, hijo) for hijo in hijos]
             siguiente.extend(hijos)
         poblacion = siguiente
 

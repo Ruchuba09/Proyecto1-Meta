@@ -6,6 +6,7 @@ from pathlib import Path
 from algoritmo_genetico import (
     algoritmo_genetico,
     algoritmo_memetico,
+    busqueda_local_insercion,
     busqueda_local_intercambio,
     cruce_ox,
     generar_poblacion_inicial,
@@ -87,6 +88,12 @@ class PruebasPfsp(unittest.TestCase):
         inicial = (0, 1, 2)
         mejorada = busqueda_local_intercambio(tiempos, inicial)
         self.assertLessEqual(calcular_fitness(tiempos, mejorada), calcular_fitness(tiempos, inicial))
+
+    def test_busqueda_local_por_insercion_conserva_la_permutacion(self):
+        tiempos = ((2, 5, 1), (4, 2, 3))
+        resultado = busqueda_local_insercion(tiempos, (0, 1, 2))
+        self.assertEqual(set(resultado), {0, 1, 2})
+        self.assertLessEqual(calcular_fitness(tiempos, resultado), 12)
 
     def test_algoritmo_memetico_es_reproducible(self):
         tiempos = ((2, 5, 1), (4, 2, 3))
