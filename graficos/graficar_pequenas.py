@@ -1,34 +1,42 @@
-import os
+from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Detecta automáticamente la carpeta donde está este archivo (carpeta 'result')
-directorio = os.path.dirname(os.path.abspath(__file__))
+# 1. Definir rutas relativas
+CARPETA_GRAFICOS = Path(__file__).resolve().parent
+PROYECTO = CARPETA_GRAFICOS.parent
+CARPETA_RESULT = PROYECTO / "result"
 
-ruta_ta001 = os.path.join(directorio, 'resultado_memetico_ta001.csv')
-ruta_ta002 = os.path.join(directorio, 'busqueda_estrategica_ta002.csv')
-ruta_salida = os.path.join(directorio, 'grafico_escala_pequena.png')
+# Archivos de entrada (CSV en carpeta result)
+ARCHIVO_TA001 = CARPETA_RESULT / "resultado_memetico_ta001.csv"
+ARCHIVO_TA002 = CARPETA_RESULT / "busqueda_estrategica_ta002.csv"
 
-# 1. Cargar datos
-df_ta001 = pd.read_csv(ruta_ta001)
-df_ta002 = pd.read_csv(ruta_ta002)
+# Archivo de salida (PNG dentro de la misma carpeta graficos)
+RUTA_SALIDA = CARPETA_GRAFICOS / "grafico_escala_pequena.png"
 
-# 2. Cotas óptimas de Taillard
+# 2. Comprobar que los CSV existan
+if not ARCHIVO_TA001.exists() or not ARCHIVO_TA002.exists():
+    raise FileNotFoundError(
+        f"No se encontraron los CSV en {CARPETA_RESULT}. "
+        "Verifica que estén dentro de la carpeta 'result'."
+    )
+
+# 3. Cargar datos
+df_ta001 = pd.read_csv(ARCHIVO_TA001)
+df_ta002 = pd.read_csv(ARCHIVO_TA002)
+
+# Cotas de Taillard
 cref_ta001 = 1278
 cref_ta002 = 1359
 
-# 3. Calcular RPD (%)
-df_ta001['rpd'] = (
-    (df_ta001['mejor_makespan'] - cref_ta001) / cref_ta001
-) * 100
-df_ta002['rpd'] = (
-    (df_ta002['mejor_makespan'] - cref_ta002) / cref_ta002
-) * 100
+# 4. Calcular RPD (%)
+df_ta001['rpd'] = ((df_ta001['mejor_makespan'] - cref_ta001) / cref_ta001) * 100
+df_ta002['rpd'] = ((df_ta002['mejor_makespan'] - cref_ta002) / cref_ta002) * 100
 
 n_corridas = min(len(df_ta001), len(df_ta002))
 corridas = range(1, n_corridas + 1)
 
-# 4. Generar gráfico
+# 5. Generar y guardar gráfico
 plt.figure(figsize=(7, 4), dpi=300)
 
 plt.plot(
@@ -58,7 +66,7 @@ plt.ylabel('RPD (%) respecto a cota de Taillard', fontsize=10)
 plt.xticks(range(1, n_corridas + 1))
 plt.grid(True, linestyle='--', alpha=0.6)
 plt.legend(loc='upper right', frameon=True, fontsize=9)
-
 plt.tight_layout()
-plt.savefig(ruta_salida)
-print("Gráfico generado exitosamente en:", ruta_salida)
+
+plt.savefig(RUTA_SALIDA)
+print(f"Gráfico generado exitosamente en: {RUTA_SALIDA}")
