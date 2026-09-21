@@ -2,9 +2,10 @@
 
 Resolución del **Permutation Flow Shop Scheduling Problem (PFSP)** sobre las
 instancias estándar de Taillard, comparando un **Algoritmo Genético (AG)** con un
-**Algoritmo Memético** (AG + búsqueda local). El objetivo es minimizar el
-*makespan* (`Cmax`): el instante en que termina el último trabajo en la última
-máquina.
+**Algoritmo Memético** (AG + búsqueda local por inserción). El objetivo es
+minimizar el *makespan* (`Cmax`): el instante en que termina el último trabajo en
+la última máquina. La comparación entre métodos se hace con el **RPD** y el test
+de **Wilcoxon**.
 
 - Python 3.10+ · el núcleo del algoritmo usa **solo la biblioteca estándar**.
 - Ejecuciones reproducibles mediante semilla.
@@ -21,7 +22,7 @@ máquina.
 5. [Uso](#5-uso)
 6. [Formatos de entrada y salida](#6-formatos-de-entrada-y-salida)
 7. [Pruebas](#7-pruebas)
-8. [Resultados registrados](#8-resultados-registrados)
+8. [Resultados y comparación estadística](#8-resultados-y-comparación-estadística)
 9. [Equipo](#9-equipo)
 10. [Referencias](#10-referencias)
 
@@ -62,38 +63,47 @@ enteros). **Fitness** = makespan (menor es mejor).
 | Criterio de término | Número fijo de generaciones |
 
 **Variante memética.** Es el mismo AG, pero los hijos (ya cruzados y mutados) se
-mejoran con **búsqueda local** cada `frecuencia_busqueda` generaciones. La búsqueda
-local explora el vecindario de intercambios de pares de posiciones con estrategia
-de *primera mejora* y se repite hasta alcanzar un óptimo local.
+mejoran con **búsqueda local por inserción** cada `frecuencia_busqueda`
+generaciones. La búsqueda local prueba mover cada trabajo a cualquier otra
+posición de la secuencia, acepta la primera mejora que encuentra y reinicia el
+recorrido, hasta alcanzar un óptimo local.
 
-> La búsqueda local evalúa O(n²) vecinos por hijo, por lo que el memético es
-> mucho más costoso por generación que el AG. `--frecuencia-busqueda` permite
-> controlar ese costo (1 = en todas las generaciones; 2 = una de cada dos; …).
+> El vecindario de inserción tiene `n·(n-1)` vecinos y cada uno se evalúa en
+> `O(n·m)`, por lo que el memético es mucho más costoso por generación que el AG.
+> `--frecuencia-busqueda` permite controlar ese costo (1 = en todas las
+> generaciones; 2 = una de cada dos; …).
+
+Con la misma semilla y el mismo tamaño de población, el AG y el memético parten
+de la **misma población inicial**, lo que permite compararlos por pares de
+semillas.
 
 ## 3. Estructura del repositorio
 
 ```
-Proyecto1-Meta-Ricardo/
+Proyecto1-Meta/
 ├── planificador.py            # Parser de instancias Taillard, tiempos de finalización y fitness
 ├── algoritmo_genetico.py      # Población, torneo, OX, mutación, búsqueda local, AG y memético
 ├── ag.py                      # CLI: una corrida (AG o memético) y escritura del CSV
-├── ejecutar_30_corridas.py    # Experimento: 30 semillas sobre una instancia
-├── graficar_resultados.py     # Gráfica del makespan por corrida
+├── ejecutar_30_corridas.py    # Experimento: varias semillas sobre una instancia
+├── comparar_metodos.py        # Comparación AG vs memético: RPD y test de Wilcoxon
 ├── pruebas.py                 # Pruebas unitarias (unittest)
-├── requirements.txt           # Dependencias (solo para graficar)
+├── requirements.txt           # Dependencias (solo para comparar y graficar)
 ├── taillard/                  # Instancias ta001 … ta120 (Taillard, 1993)
 ├── result/                    # CSV de resultados de las corridas
-├── graficos/                  # Gráficas generadas (.png)
+├── graficos/                  # Scripts de gráficas y sus imágenes (.png)
+│   ├── graficar_resultados.py
+│   └── graficar_pequenas.py
 ├── paper_instances/           # Dataset original del artículo (no lo usa el código)
 ├── Proyecto_PFSP_Enunciado.pdf
-└── distribucion               # Reparto de tareas del equipo
+└── .gitignore
 ```
 
 ## 4. Instalación
 
 Requiere **Python 3.10 o superior**. Para ejecutar el AG, el memético y las
-pruebas **no hace falta instalar nada**; las dependencias de `requirements.txt`
-(`numpy`, `matplotlib`, `pandas`) solo se necesitan para graficar.
+pruebas **no hace falta instalar nada**. Las dependencias de `requirements.txt`
+(`matplotlib`, `pandas`, `scipy`, `seaborn`) solo se necesitan para la
+comparación estadística y las gráficas.
 
 Se recomienda un entorno virtual.
 
@@ -150,8 +160,13 @@ python ag.py 1 100 0.8 0.2 100 taillard/ta001.txt resultados.csv --metodo memeti
 ```
 
 Cada ejecución **añade una fila** al CSV (no lo sobrescribe) e imprime el mejor
-makespan encontrado. El elitismo (1) y el tamaño del torneo (3) no se exponen por
-línea de comandos; pueden cambiarse desde Python (ver 5.2).
+makespan encontrado. Si el archivo ya existe con un formato distinto al actual
+(por ejemplo, un CSV antiguo sin la columna `metodo`), `ag.py` se niega a
+añadirle filas: usa otro nombre de archivo. Los errores (instancia inexistente,
+probabilidades fuera de rango, etc.) se informan con un mensaje breve.
+
+El elitismo (1) y el tamaño del torneo (3) no se exponen por línea de comandos;
+pueden cambiarse desde Python (ver 5.2).
 
 ### 5.2 Como biblioteca de Python
 
@@ -193,27 +208,54 @@ Funciones reutilizables de `algoritmo_genetico.py`: `generar_poblacion_inicial`,
 `busqueda_local_insercion`. En `planificador.py`: `leer_instancia`,
 `tiempos_finalizacion` y `calcular_fitness`.
 
-### 5.3 Experimento de 30 corridas
+### 5.3 Experimento de varias corridas
 
 ```bash
-python ejecutar_30_corridas.py
+python ejecutar_30_corridas.py [opciones]
 ```
 
-Ejecuta las semillas 1 a 30 con el **algoritmo genético** y los parámetros
-definidos como constantes al inicio del script (por defecto: `taillard/ta001.txt`,
-población 100, `Pc` 0.8, `Pm` 0.2, 100 generaciones). El resultado se guarda en
-`result/r_ins_20_10_01_c4.csv`, y **se sobrescribe** si ya existía. Para cambiar
-la instancia o los parámetros, edita esas constantes.
+Ejecuta las semillas `1 … --corridas` y guarda todas las filas en un mismo CSV
+dentro de `result/`. **Si el archivo de salida ya existía, se sobrescribe.**
 
-### 5.4 Gráfica
+| Opción | Por defecto | Descripción |
+|---|---|---|
+| `--corridas` | `30` | Número de semillas (1 a N) |
+| `--poblacion` | `100` | Tamaño de la población |
+| `--cruce` | `0.8` | Probabilidad de cruce |
+| `--mutacion` | `0.2` | Probabilidad de mutación |
+| `--iteraciones` | `100` | Generaciones |
+| `--entrada` | `taillard/ta001.txt` | Instancia |
+| `--salida` | `r_ins_20_10_01_c4.csv` | Nombre del CSV en `result/` |
+| `--metodo` | `genetico` | `genetico` o `memetico` |
+| `--frecuencia-busqueda` | `1` | Solo memético |
+
+### 5.4 Comparación estadística AG vs. memético
 
 ```bash
-python graficar_resultados.py
+python comparar_metodos.py result/<csv_ag>.csv result/<csv_memetico>.csv [--salida result/comparacion_metodos.csv]
 ```
 
-Grafica el mejor makespan por semilla del CSV indicado en la constante
-`ARCHIVO_RESULTADOS` (al inicio del script) y guarda la imagen en
-`graficos/mejor_makespan_por_corrida.png`.
+Empareja las corridas de ambos métodos **por semilla**, calcula el RPD de cada
+una y aplica el **test de rangos con signo de Wilcoxon** sobre el makespan. Imprime
+el estadístico y el p-valor, y guarda la tabla por semilla en el CSV de salida
+(`semilla`, `makespan_genetico`, `makespan_memetico`, `rpd_genetico`,
+`rpd_memetico`).
+
+Requisitos: ambos CSV deben tener el formato actual (con las columnas `metodo`,
+`instancia` y `limite_superior`), corresponder a la **misma instancia y los mismos
+parámetros**, y compartir al menos dos semillas.
+
+### 5.5 Gráficas
+
+Los scripts de `graficos/` se ejecutan desde cualquier carpeta y guardan su
+imagen en `graficos/`:
+
+```bash
+python graficos/graficar_resultados.py   # makespan por corrida -> mejor_makespan_por_corrida.png
+python graficos/graficar_pequenas.py     # RPD por corrida       -> grafico_escala_pequena.png
+```
+
+Los CSV de entrada se definen como constantes al inicio de cada script.
 
 ## 6. Formatos de entrada y salida
 
@@ -238,14 +280,20 @@ además la semilla y las cotas superior/inferior (`limite_superior`,
 | Columna | Contenido |
 |---|---|
 | `semilla` | Semilla de la corrida |
+| `metodo` | `genetico` o `memetico` |
+| `instancia` | Nombre de la instancia (p. ej. `ta001`) |
 | `tamano_poblacion` | Tamaño de la población |
 | `probabilidad_cruce` | `Pc` |
 | `probabilidad_mutacion` | `Pm` |
 | `numero_iteraciones` | Generaciones |
+| `frecuencia_busqueda` | Frecuencia de la búsqueda local (vacío en el AG) |
 | `tiempo_ejecucion` | Tiempo de la corrida (segundos) |
 | `mejor_generacion` | Generación en que se alcanzó el mejor makespan por primera vez |
 | `mejor_makespan` | Mejor makespan obtenido |
-| `mejor_solucion` | Permutación de trabajos que lo produjo |
+| `limite_superior` | Cota superior (UB) de la instancia |
+| `limite_inferior` | Cota inferior (LB) de la instancia |
+| `rpd` | Desviación porcentual relativa respecto a la cota superior |
+| `mejor_solucion` | Permutación de trabajos que produjo el mejor makespan |
 
 ## 7. Pruebas
 
@@ -253,40 +301,39 @@ además la semilla y las cotas superior/inferior (`limite_superior`,
 python -m unittest pruebas -v
 ```
 
-Las 8 pruebas cubren: lectura del parser, cálculo de tiempos de finalización y
+Las 9 pruebas cubren: lectura del parser, cálculo de tiempos de finalización y
 fitness con un ejemplo pequeño, rechazo de permutaciones inválidas, validez de
 población y operadores, selección por torneo, reproducibilidad del AG y del
-memético, y que la búsqueda local nunca empeora la solución.
+memético, y que la búsqueda local no empeora la solución y conserva la
+permutación.
 
-## 8. Resultados registrados
+## 8. Resultados y comparación estadística
 
-Resumen de los CSV incluidos en `result/`. `RPD` es la desviación porcentual
-relativa respecto a la cota superior (`UB`) publicada en el encabezado de cada
-instancia:
+La métrica de comparación es el **RPD** (*Relative Percentage Deviation*)
+respecto a la cota superior (`UB`) publicada en el encabezado de cada instancia:
 
 ```
 RPD(%) = (Cmax_obtenido − Cmax_UB) / Cmax_UB × 100
 ```
 
-| Instancia | Tamaño | UB | Pob. | Gen. | Pc / Pm | Corridas | Mejor | Media | RPD mejor | RPD media | Tiempo medio (s) |
-|---|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|
-| ta001 | 20×5 | 1278 | 100 | 100 | 0.8 / 0.2 | 30 | 1297 | 1304.6 | 1.49 | 2.08 | 0.3 |
-| ta001 | 20×5 | 1278 | 200 | 500 | 0.9 / 0.15 | 5 | 1278 | 1278.0 | 0.00 | 0.00 | 719.6 |
-| ta002 | 20×5 | 1359 | 150 | 700 | 0.9 / 0.1–0.2 | 20 | 1359 | 1359.8 | 0.00 | 0.06 | 352.1 |
-| ta002 | 20×5 | 1359 | 200 | 500 | 0.9 / 0.15 | 5 | 1359 | 1359.8 | 0.00 | 0.06 | 356.8 |
-| ta003 | 20×5 | 1081 | 150 | 700 | 0.9 / 0.1–0.2 | 19 | 1081 | 1086.9 | 0.00 | 0.55 | 654.2 |
-| ta041 | 50×10 | 3025 | 80 | 200 | 0.9 / 0.15 | 10 | 3299 | 3343.7 | 9.06 | 10.54 | 7.1 |
-| ta041 | 50×10 | 3025 | 120 | 800 | 0.9 / 0.15 | 11 | 3218 | 3288.3 | 6.38 | 8.70 | 29.0 |
-| ta041 | 50×10 | 3025 | 300 | 2500 | 0.9 / 0.2 | 1 | 3272 | 3272.0 | 8.17 | 8.17 | 204.5 |
-| ta051 | 50×20 | 3875 | 80 | 200 | 0.9 / 0.15 | 10 | 4257 | 4333.7 | 9.86 | 11.84 | 12.6 |
-| ta051 | 50×20 | 3875 | 120 | 400 | 0.9 / 0.15 | 10 | 4255 | 4316.3 | 9.81 | 11.39 | 32.9 |
-| ta051 | 50×20 | 3875 | 80 | 300 | 0.9 / 0.15 | 2 | 3950 | 3952.0 | 1.94 | 1.99 | 8114.4 |
-| ta051 | 50×20 | 3875 | 120 | 800 | 0.9 / 0.15 | 1 | 3963 | 3963.0 | 2.27 | 2.27 | 9292.8 |
+Las cotas `UB` son las que traen los archivos de Taillard y pueden no coincidir
+con los mejores valores conocidos más recientes de la literatura.
 
-**Nota:** los CSV no registran qué método (`genetico` o `memetico`) generó cada
-fila; el tiempo medio de corrida permite distinguirlas de forma orientativa. Las
-cotas `UB` son las que traen los archivos de Taillard y pueden no coincidir con
-los mejores valores conocidos más recientes de la literatura.
+Flujo completo para comparar ambos métodos en una instancia (mismas semillas,
+población y probabilidades):
+
+```bash
+python ejecutar_30_corridas.py --entrada taillard/ta001.txt --salida ta001_ag.csv
+python ejecutar_30_corridas.py --entrada taillard/ta001.txt --salida ta001_mem.csv --metodo memetico
+python comparar_metodos.py result/ta001_ag.csv result/ta001_mem.csv --salida result/comparacion_ta001.csv
+```
+
+> El memético puede tardar de varios minutos a horas por corrida según el tamaño
+> de la instancia; ajusta `--frecuencia-busqueda`, la población y las
+> generaciones para acotar el tiempo.
+
+<!-- TODO: pegar aquí la tabla de resultados (mejor, media, RPD y p-valor por
+     instancia y método) cuando se regeneren los CSV con el formato actual. -->
 
 ## 9. Equipo
 
